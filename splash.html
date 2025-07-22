@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Splash Screen</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: black;
+    }
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <video id="splashVideo" autoplay muted>
+    <source src="CSM 16x9.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const video = document.getElementById('splashVideo');
+    video.onended = () => {
+      window.location = 'index.html';
+    };
+  </script>
+</body>
+</html> 

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Electron App</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    nav#navbar {
+      width: 100vw;
+      background: #0056b3;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1em 2em;
+      box-sizing: border-box;
+    }
+    #nav-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+    #logout {
+      background: #fff;
+      color: #0056b3;
+      border: none;
+      padding: 0.5em 1.2em;
+      border-radius: 4px;
+      font-size: 1em;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s, color 0.2s;
+    }
+    #logout:hover {
+      background: #e6e6e6;
+    }
+    #dashboard {
+      display: none;
+      padding: 2em;
+      background: #f8faff;
+      min-height: 80vh;
+      color: #0056b3;
+    }
+    #login {
+      display: none;
+      padding: 2em;
+      text-align: center;
+    }
+    #loginBtn {
+      background: #0056b3;
+      color: #fff;
+      border: none;
+      padding: 0.7em 2em;
+      border-radius: 4px;
+      font-size: 1.1em;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 1em;
+      transition: background 0.2s, color 0.2s;
+    }
+    #loginBtn:hover {
+      background: #003d80;
+    }
+  </style>
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/1.19/auth0-spa-js.production.js"></script>
+</head>
+<body>
+  <nav id="navbar" style="display:none;">
+    <span id="nav-title">CSM</span>
+    <button id="logout">Logout</button>
+  </nav>
+  <div id="dashboard">
+    <h1>Welcome to the Dashboard!</h1>
+  </div>
+  <div id="login">
+    <h1>Please log in</h1>
+    <button id="loginBtn">Login with Auth0</button>
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const auth0Domain = 'dev-i6zohne55c1mcy4z.us.auth0.com';
+    const auth0ClientId = '9B5pBTvqG4FgW8oWtX2b8kZ63D45pHmH';
+    const redirectUri = 'csmapp://callback';
+    let auth0 = null;
+    let pendingAuthCallbackUrl = null;
+
+    async function configureClient() {
+      auth0 = await createAuth0Client({
+        domain: auth0Domain,
+        client_id: auth0ClientId,
+        redirect_uri: redirectUri,
+        cacheLocation: 'localstorage',
+        useRefreshTokens: true
+      });
+      // If a callback URL was received before auth0 was ready, handle it now
+      if (pendingAuthCallbackUrl) {
+        await handleAuthCallback(pendingAuthCallbackUrl);
+        pendingAuthCallbackUrl = null;
+      }
+    }
+
+    async function updateUI() {
+      const isAuthenticated = await auth0.isAuthenticated();
+      if (isAuthenticated) {
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('navbar').style.display = 'flex';
+      } else {
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('login').style.display = 'block';
+        document.getElementById('navbar').style.display = 'none';
+      }
+    }
+
+    async function handleAuthCallback(url) {
+      try {
+        await auth0.handleRedirectCallback(url);
+        updateUI();
+      } catch (e) {
+        alert('Auth0 callback error: ' + e.message);
+        console.error('Auth0 callback error:', e);
+      }
+    }
+
+    window.onload = async () => {
+      await configureClient();
+      updateUI();
+    };
+
+    document.getElementById('loginBtn').onclick = async () => {
+      await auth0.loginWithRedirect({
+        redirect_uri: redirectUri
+      });
+    };
+
+    document.getElementById('logout').onclick = () => {
+      auth0.logout({
+        returnTo: redirectUri
+      });
+    };
+
+    // Listen for custom protocol callback from main process
+    ipcRenderer.on('auth-callback', async (event, url) => {
+      if (auth0) {
+        await handleAuthCallback(url);
+      } else {
+        pendingAuthCallbackUrl = url;
+      }
+    });
+  </script>
+</body>
+</html> 
